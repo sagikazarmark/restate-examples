@@ -1,0 +1,33 @@
+[package]
+name = "restate-examples"
+edition = "2024"
+version = "0.0.0"
+description = "Restate service for OpenDAL"
+license = "MIT"
+repository = "https://github.com/sagikazarmark/restate-examples"
+homepage = "https://github.com/sagikazarmark/restate-examples"
+publish = false
+
+[[bin]]
+name = "restate-examples"
+path = "src/main.rs"
+
+[dependencies]
+schemars = { version = "1.1", features = ["jiff02", "url2"] }
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+restate-sdk = { version = "0.7", features = ["schemars"] }
+tokio = { version = "1", features = ["full"] }
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", features = ["env-filter"] }
+anyhow = "1.0.100"
+thiserror = "2.0.17"
+rand = "0.9.2"
+reqwest = { version = "0.12", default-features = false, features = [ "rustls-tls", "stream", "json" ] }
+
+[package.metadata.release]
+publish = false
+sign-commit = true
+sign-tag = true
+tag-message = "Release {{version}}"
+tag-prefix = ""
