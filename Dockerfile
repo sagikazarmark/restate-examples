@@ -27,7 +27,7 @@ RUN cp -r ./target/$(xx-cargo --print-target-triple)/release/restate-examples /u
 
 
 # FROM alpine:3.23.0@sha256:51183f2cfa6320055da30872f211093f9ff1d3cf06f39a0bdb212314c5dc7375
-FROM debian:13.3-slim@sha256:e9f1b0bda36daad09fcd6779f7af47191dbee4ff52f8903fffd15240eb986bd8
+FROM debian:13.4-slim@sha256:26f98ccd92fd0a44d6928ce8ff8f4921b4d2f535bfa07555ee5d18f61429cf0c
 
 COPY --from=builder /usr/local/bin/restate-examples /usr/local/bin/
 
