@@ -1,38 +1,56 @@
+# syntax=docker/dockerfile:1
+# check=skip=CopyIgnoredFile
+
 FROM --platform=$BUILDPLATFORM tonistiigi/xx:1.9.0@sha256:c64defb9ed5a91eacb37f96ccc3d4cd72521c4bd18d5442905b95e2226b0e707 AS xx
 
-FROM --platform=$BUILDPLATFORM rust:1.95.0-slim@sha256:275c320a57d0d8b6ab09454ab6d1660d70c745fb3cc85adbefad881b69a212cc AS builder
+FROM --platform=$BUILDPLATFORM rust:1.93.0-bookworm@sha256:d0a4aa3ca2e1088ac0c81690914a0d810f2eee188197034edf366ed010a2b382 AS base
+
+ARG CARGO_CHEF_VERSION=0.1.77
+RUN cargo install cargo-chef --version $CARGO_CHEF_VERSION --locked
 
 COPY --from=xx / /
 
-RUN apt-get update && apt-get install -y clang lld
-
 WORKDIR /usr/src/app
+
+
+FROM base AS deps
+
+COPY . .
+
+RUN cargo chef prepare --recipe-path recipe.json
+
+
+FROM base AS builder
+
+RUN apt-get update && \
+    apt-get install -y --no-install-recommends clang lld && \
+    rm -rf /var/lib/apt/lists/*
 
 ARG TARGETPLATFORM
 
 RUN xx-apt-get update && \
-    xx-apt-get install -y \
-    gcc \
-    g++ \
-    libc6-dev \
-    pkg-config
+    xx-apt-get install -y --no-install-recommends gcc libc6-dev && \
+    rm -rf /var/lib/apt/lists/*
 
-COPY . ./
+COPY --from=deps /usr/src/app/recipe.json recipe.json
 
-ARG RESTATE_SERVICE_NAME
+RUN xx-cargo chef cook --locked --release --recipe-path recipe.json
 
-RUN xx-cargo build --release --bin restate-examples
+COPY . .
+
+RUN xx-cargo build --locked --release --bin restate-examples
 RUN xx-verify ./target/$(xx-cargo --print-target-triple)/release/restate-examples
-RUN cp -r ./target/$(xx-cargo --print-target-triple)/release/restate-examples /usr/local/bin/restate-examples
+RUN cp ./target/$(xx-cargo --print-target-triple)/release/restate-examples /usr/local/bin/restate-examples
 
 
-# FROM alpine:3.23.0@sha256:51183f2cfa6320055da30872f211093f9ff1d3cf06f39a0bdb212314c5dc7375
-FROM debian:13.4-slim@sha256:26f98ccd92fd0a44d6928ce8ff8f4921b4d2f535bfa07555ee5d18f61429cf0c
+FROM debian:13.6-slim@sha256:020c0d20b9880058cbe785a9db107156c3c75c2ac944a6aa7ab59f2add76a7bd
 
 COPY --from=builder /usr/local/bin/restate-examples /usr/local/bin/
 
 ENV RUST_LOG=info
 
 EXPOSE 9080
+
+USER 65532:65532
 
 CMD ["restate-examples"]
