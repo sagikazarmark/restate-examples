@@ -1,0 +1,28 @@
+[package]
+name = "restate-examples"
+version.workspace = true
+description = "Example Restate services"
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+homepage.workspace = true
+publish = false
+
+[[bin]]
+name = "restate-examples"
+path = "src/main.rs"
+doc = false
+
+[dependencies]
+anyhow = "1"
+rand = "0.9"
+reqwest = { version = "0.12", default-features = false, features = ["rustls-tls", "stream", "json"] }
+restate-sdk = { version = "0.7", features = ["schemars"] }
+schemars = { version = "1.2", features = ["jiff02", "url2"] }
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+thiserror = "2"
+tokio = { version = "1", features = ["full"] }
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", features = ["env-filter"] }
