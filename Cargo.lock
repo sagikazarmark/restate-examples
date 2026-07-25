@@ -1283,7 +1283,7 @@ name = "restate-examples"
 version = "0.1.0"
 dependencies = [
  "anyhow",
- "rand 0.9.5",
+ "rand 0.10.2",
  "reqwest",
  "restate-sdk",
  "schemars 1.2.1",

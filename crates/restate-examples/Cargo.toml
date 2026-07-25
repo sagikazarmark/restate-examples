@@ -16,7 +16,7 @@ doc = false
 
 [dependencies]
 anyhow = "1"
-rand = "0.9"
+rand = "0.10"
 reqwest = { version = "0.12", default-features = false, features = ["rustls-tls", "stream", "json"] }
 restate-sdk = { version = "0.7", features = ["schemars"] }
 schemars = { version = "1.2", features = ["jiff02", "url2"] }
