@@ -1,27 +1,20 @@
 use std::collections::HashMap;
 use std::convert::Infallible;
 
-use rand::RngCore;
 use restate_sdk::prelude::*;
 
-#[restate_sdk::object]
-pub(crate) trait Counter {
-    #[shared]
-    async fn get() -> Result<u64, TerminalError>;
-    async fn add(val: u64) -> Result<u64, TerminalError>;
-    async fn increment() -> Result<u64, TerminalError>;
-    async fn reset() -> Result<(), TerminalError>;
-}
-
-pub(crate) struct CounterImpl;
+pub(crate) struct Counter;
 
 const COUNT: &str = "count";
 
-impl Counter for CounterImpl {
+#[restate_sdk::object]
+impl Counter {
+    #[handler]
     async fn get(&self, ctx: SharedObjectContext<'_>) -> Result<u64, TerminalError> {
         Ok(ctx.get::<u64>(COUNT).await?.unwrap_or(0))
     }
 
+    #[handler]
     async fn add(&self, ctx: ObjectContext<'_>, val: u64) -> Result<u64, TerminalError> {
         let current = ctx.get::<u64>(COUNT).await?.unwrap_or(0);
         let new = current + val;
@@ -29,33 +22,31 @@ impl Counter for CounterImpl {
         Ok(new)
     }
 
+    #[handler]
     async fn increment(&self, ctx: ObjectContext<'_>) -> Result<u64, TerminalError> {
         self.add(ctx, 1).await
     }
 
+    #[handler]
     async fn reset(&self, ctx: ObjectContext<'_>) -> Result<(), TerminalError> {
         ctx.clear(COUNT);
         Ok(())
     }
 }
 
-#[restate_sdk::service]
-pub(crate) trait FailureExample {
-    #[name = "doRun"]
-    async fn do_run() -> Result<(), TerminalError>;
-}
-
-pub(crate) struct FailureExampleImpl;
+pub(crate) struct FailureExample;
 
 #[derive(Debug, thiserror::Error)]
 #[error("I'm very bad, retry me")]
 pub(crate) struct MyError;
 
-impl FailureExample for FailureExampleImpl {
+#[restate_sdk::service]
+impl FailureExample {
+    #[handler(name = "doRun")]
     async fn do_run(&self, context: Context<'_>) -> Result<(), TerminalError> {
         context
             .run::<_, _, ()>(|| async move {
-                if rand::rng().next_u32().is_multiple_of(4) {
+                if rand::random::<u32>().is_multiple_of(4) {
                     Err(TerminalError::new("Failed!!!"))?
                 }
 
@@ -67,28 +58,21 @@ impl FailureExample for FailureExampleImpl {
     }
 }
 
+pub(crate) struct Greeter;
+
 #[restate_sdk::service]
-pub(crate) trait Greeter {
-    async fn greet(name: String) -> Result<String, Infallible>;
-}
-
-pub(crate) struct GreeterImpl;
-
-impl Greeter for GreeterImpl {
+impl Greeter {
+    #[handler]
     async fn greet(&self, _: Context<'_>, name: String) -> Result<String, Infallible> {
         Ok(format!("Greetings {name}"))
     }
 }
 
+pub(crate) struct RunExample(pub(crate) reqwest::Client);
+
 #[restate_sdk::service]
-pub(crate) trait RunExample {
-    #[name = "doRun"]
-    async fn do_run() -> Result<Json<HashMap<String, String>>, HandlerError>;
-}
-
-pub(crate) struct RunExampleImpl(pub(crate) reqwest::Client);
-
-impl RunExample for RunExampleImpl {
+impl RunExample {
+    #[handler(name = "doRun")]
     async fn do_run(
         &self,
         context: Context<'_>,
@@ -111,5 +95,39 @@ impl RunExample for RunExampleImpl {
             .into_inner();
 
         Ok(res.into())
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use restate_sdk::service::Discoverable;
+
+    use super::{Counter, FailureExample, Greeter, RunExample};
+
+    #[test]
+    fn discovers_existing_service_api() {
+        let counter = <Counter as Discoverable>::discover();
+        assert_eq!(counter.name.as_str(), "Counter");
+
+        let failure_example = <FailureExample as Discoverable>::discover();
+        assert_eq!(failure_example.name.as_str(), "FailureExample");
+        assert!(
+            failure_example
+                .handlers
+                .iter()
+                .any(|handler| handler.name.as_str() == "doRun")
+        );
+
+        let greeter = <Greeter as Discoverable>::discover();
+        assert_eq!(greeter.name.as_str(), "Greeter");
+
+        let run_example = <RunExample as Discoverable>::discover();
+        assert_eq!(run_example.name.as_str(), "RunExample");
+        assert!(
+            run_example
+                .handlers
+                .iter()
+                .any(|handler| handler.name.as_str() == "doRun")
+        );
     }
 }
